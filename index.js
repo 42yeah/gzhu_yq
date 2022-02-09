@@ -2,12 +2,12 @@
 
 const fetch = require("node-fetch");
 const cheerio = require("cheerio");
-const HttpsProxyAgent = require("https-proxy-agent");
+// const HttpsProxyAgent = require("https-proxy-agent");
 const fs = require("fs");
 const enc = require("./auxillary/strEnc");
-const agent = new HttpsProxyAgent("http://127.0.0.1:8080");
+// const agent = new HttpsProxyAgent("http://127.0.0.1:8080");
 
-process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
+// process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
 
 
 // Aux func
@@ -25,7 +25,6 @@ async function fetchWithCookies(url, cookieString, casCookies) {
         currentCookies = casCookies;
     }
     let response = await fetch(url, {
-        agent,
         redirect: "manual",
         headers: {
             "Cookie": currentCookies
@@ -45,7 +44,6 @@ async function fetchWithCookies(url, cookieString, casCookies) {
             currentCookies = casCookies;
         }
         response = await fetch(location, {
-            agent: agent,
             redirect: "manual",
             headers: {
                 "Cookie": currentCookies
@@ -60,16 +58,15 @@ async function fetchWithCookies(url, cookieString, casCookies) {
 
 // Step 0: obtain client ID
 async function obtainClientId() {
-    const response = await fetch("http://yq.gzhu.edu.cn", { agent });
+    const response = await fetch("https://yq.gzhu.edu.cn");
     return response;
 }
 
 // Step 1: log the fuck in
-async function login(page) {
+async function login(page, credentials) {
     let cookieString = makeCookieString(page.headers.raw()["set-cookie"]);
     const $ = cheerio.load(await page.text(), null, false);
     const formAction = "https://newcas.gzhu.edu.cn" + $("#loginForm").prop("action");
-    const credentials = JSON.parse(fs.readFileSync("credentials.json"));
 
     const lt = $("#lt").val();
     const rsa = enc.strEnc(credentials["username"] + credentials["password"] + lt, "1", "2", "3");
@@ -82,7 +79,6 @@ async function login(page) {
     let response = await fetch(formAction, {
         method: "POST",
         mode: "cors",
-        agent: agent,
         redirect: "manual",
         headers: {
             "Cookie": cookieString,
@@ -108,7 +104,6 @@ async function login(page) {
 
         let location = response.headers.raw()["location"];
         response = await fetch(location, {
-            agent: agent,
             redirect: "manual",
             headers: {
                 "Cookie": cookieString
@@ -126,7 +121,7 @@ async function login(page) {
 
 // Step 2: start the affair/routine
 async function startAffair(cookieString, casCookies) {
-    const ret = await fetchWithCookies("http://yqtb.gzhu.edu.cn/infoplus/form/XNYQSB/start", cookieString, casCookies);
+    const ret = await fetchWithCookies("https://yqtb.gzhu.edu.cn/infoplus/form/XNYQSB/start", cookieString, casCookies);
     const responseText = await ret.response.text();
     const $ = cheerio.load(responseText, null, false);
 
@@ -137,13 +132,12 @@ async function startAffair(cookieString, casCookies) {
 
     let formData = `workflowId=${workflowId}&rand=${rand}&width=${width}&csrfToken=${csrfToken}`;
     
-    let response = await fetch("http://yqtb.gzhu.edu.cn/infoplus/interface/preview", {
+    let response = await fetch("https://yqtb.gzhu.edu.cn/infoplus/interface/preview", {
         method: "POST",
-        agent,
         headers: {
             "Cookie": ret.cookieString,
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "Referer": "http://yqtb.gzhu.edu.cn/infoplus/form/XNYQSB/start"
+            "Referer": "https://yqtb.gzhu.edu.cn/infoplus/form/XNYQSB/start"
         },
         body: formData
     });
@@ -178,9 +172,8 @@ async function startAffair(cookieString, casCookies) {
     finalData["_VAR_ENTRY_TAGS"] = "";
 
     formData = `idc=XNYQSB&release=&csrfToken=${csrfToken}&formData=${JSON.stringify(finalData)}&lang=zh`;
-    response = await fetch("http://yqtb.gzhu.edu.cn/infoplus/interface/start", {
+    response = await fetch("https://yqtb.gzhu.edu.cn/infoplus/interface/start", {
         method: "POST",
-        agent,
         headers: {
             "Cookie": ret.cookieString,
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
@@ -209,8 +202,7 @@ async function checkIn(affairResult, cookieString, casCookies) {
 
     let formData = `stepId=${stepId}&instanceId=${instanceId}&admin=${admin}&rand=${rand}&width=${width}&lang=${lang}&csrfToken=${csrfToken}`;
 
-    let res = await fetch("http://yqtb.gzhu.edu.cn/infoplus/interface/render", {
-        agent,
+    let res = await fetch("https://yqtb.gzhu.edu.cn/infoplus/interface/render", {
         method: "POST",
         headers: {
             "Cookie": ret.cookieString,
@@ -269,14 +261,15 @@ async function checkIn(affairResult, cookieString, casCookies) {
             finalData[key] = allData[key];
 
             // Also, unless something ends in "SJ", make it a string I guess?
-            if (!key.endsWith("SJ")) {
+            // HOWEVER, booleans are not to be stringified, for magical reasons that nobody cares.
+            if (!key.endsWith("SJ") && typeof(finalData[key]) != "boolean") {
                 finalData[key] = "" + finalData[key];
             }
         }
     }
     finalData["_VAR_ENTRY_NAME"] = "学生健康状况申报_";
     finalData["_VAR_ENTRY_TAGS"] = "疫情应用,移动端";
-    finalData["_VAR_URL"] = "http://yqtb.gzhu.edu.cn/infoplus/form/12792160/render";
+    finalData["_VAR_URL"] = "https://yqtb.gzhu.edu.cn/infoplus/form/12792160/render";
 
     const overrides = JSON.parse(fs.readFileSync("overrides.json"));
     for (key in overrides) {
@@ -308,8 +301,7 @@ async function checkIn(affairResult, cookieString, casCookies) {
     // And finally, we make this massive POST twice...
     formData = `stepId=${stepId}&actionId=${actionId}&formData=${JSON.stringify(finalData)}&timestamp=${timestamp}&rand=${rand}&boundFields=${boundFields}&csrfToken=${csrfToken}&lang=${lang}`;
 
-    res = await fetch("http://yqtb.gzhu.edu.cn/infoplus/interface/listNextStepsUsers", {
-        agent,
+    res = await fetch("https://yqtb.gzhu.edu.cn/infoplus/interface/listNextStepsUsers", {
         method: "POST",
         headers: {
             "Cookie": ret.cookieString,
@@ -327,8 +319,7 @@ async function checkIn(affairResult, cookieString, casCookies) {
 
     formData += `&remark=&nextUsers={}`;
 
-    res = await fetch("http://yqtb.gzhu.edu.cn/infoplus/interface/doAction", {
-        agent,
+    res = await fetch("https://yqtb.gzhu.edu.cn/infoplus/interface/doAction", {
         method: "POST",
         headers: {
             "Cookie": ret.cookieString,
@@ -347,13 +338,12 @@ async function checkIn(affairResult, cookieString, casCookies) {
     return false;
 }
 
-async function main() {
+async function go(credentials) {
     let response = await obtainClientId();
-    let ret = await login(response);
+    let ret = await login(response, credentials);
     let casCookies = ret.casCookies;
     ret = await startAffair(ret.cookieString, casCookies);
-    ret = await checkIn(ret.result, ret.cookieString, casCookies);
-
+    return await checkIn(ret.result, ret.cookieString, casCookies);
 }
 
-main();
+module.exports.go = go;
