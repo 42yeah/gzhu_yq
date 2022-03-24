@@ -2,3 +2,4 @@ credentials.json
 node_modules
 .DS_Store
 node_modules_mac
+debug/*
