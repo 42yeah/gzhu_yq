@@ -4,5 +4,14 @@
     "fieldCNS": true,
     "fieldJKMsfwlm": "1",
     "fieldJBXXdrsfwc": "2",
-    "fieldSTQKbrstzk1": "1"
+    "fieldSTQKbrstzk1": "1",
+    "fieldJBXXjgs": "440000",
+    "fieldJBXXjgs_Name": "广东省",
+    "fieldJBXXjgshi": "440100",
+    "fieldJBXXjgshi_Name": "广州市",
+    "fieldJBXXjgshi_Attr": "{\"_parent\":\"440000\"}",
+    "fieldJBXXjgq": "440113",
+    "fieldJBXXjgq_Name": "番禺区",
+    "fieldJBXXjgq_Attr": "{\"_parent\":\"440100\"}",
+    "fieldJBXXjgsjtdz": "广州大学"
 }
